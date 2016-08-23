@@ -4,11 +4,12 @@
 AC_PREREQ([2.69])
 AC_INIT([clairvoyance-client], [0.1], [tim@metaverse.systems])
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([src/main.c])
+AC_CONFIG_SRCDIR([src/main.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CXX
 
 # Checks for libraries.
 AC_CHECK_HEADER([json-c/json.h],
