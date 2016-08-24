@@ -4,6 +4,7 @@
 #include <json-c/json_object.h>
 
 #include "../include/config.h"
+#include "../include/net.h"
 
 int main(int argc, char *argv[])
 {
@@ -24,6 +25,8 @@ int main(int argc, char *argv[])
         std::cout << e << std::endl;
         return -1;
     }
+
+    clairvoyance::init_ssl_lib();
 
     std::cout << "Server: " <<  config->server << std::endl;
     std::cout << "Port: " << config->port << std::endl;
