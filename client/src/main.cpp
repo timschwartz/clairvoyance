@@ -2,13 +2,45 @@
 #include <iostream>
 #include <json-c/json.h>
 #include <json-c/json_object.h>
+#include <unistd.h>
 
-#include "../include/config.h"
+#include "../include/json.h"
 #include "../include/net.h"
+
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 15
+#endif
+
+#ifndef LOGIN_NAME_MAX
+#define LOGIN_NAME_MAX 22
+#endif
+
+namespace clairvoyance
+{
+    /** Splits a string by a character.
+     *  @param [in] s The string to split.
+     *  @param [in] c The character to split the string on.
+     *  @return Results of the split as a vector of strings.
+     */
+    const std::vector<std::string> explode(const std::string& s, const char& c)
+    {
+            std::string buff{""};
+            std::vector<std::string> v;
+
+            for(auto n:s)
+            {
+                    if(n != c) buff+=n; else
+                    if(n == c && buff != "") { v.push_back(buff); buff = ""; }
+            }
+            if(buff != "") v.push_back(buff);
+
+            return v;
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    clairvoyance::config *config;
+    clairvoyance::json *config;
 
     if(argc < 2)
     {
@@ -16,9 +48,28 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    std::fstream config_file;
+    std::string config_data;
+
+    config_file.open(argv[1], std::fstream::in | std::fstream::out);
+
+    if(!config_file.good())
+    {
+        std::cout <<  "Couldn't read config file " <<  argv[1] << std::endl;
+        return -1;
+    }
+
+    /* Enlarge config_data to hold contents and read in file. */
+    config_file.seekg(0, std::ios::end);
+    config_data.resize(config_file.tellg());
+    config_file.seekg(0, std::ios::beg);
+    config_file.read(&config_data[0], config_data.size());
+    config_file.close();
+
+
     try
     {
-        config = new clairvoyance::config(argv[1]);
+        config = new clairvoyance::json(config_data);
     } 
     catch (std::string e)
     {
@@ -28,8 +79,78 @@ int main(int argc, char *argv[])
 
     clairvoyance::init_ssl_lib();
 
-    std::cout << "Server: " <<  config->server << std::endl;
-    std::cout << "Port: " << config->port << std::endl;
-    std::cout << "URL: " << config->url << std::endl;
+    char hostname[HOST_NAME_MAX];
+#ifdef __WIN32__
+    strcpy(hostname, getenv("COMPUTERNAME"));
+#else
+    gethostname(hostname, HOST_NAME_MAX);
+#endif
+    config->set("hostname", hostname);
+
+    char username[LOGIN_NAME_MAX];
+#ifdef __WIN32__
+    strcpy(username, getenv("USERNAME"));
+#else
+    strcpy(username, getlogin());
+#endif
+    config->set("username", username);
+
+    std::cout << "Server: " <<  config->get("server") << std::endl;
+    std::cout << "Port: " << config->get("port") << std::endl;
+    std::cout << "Shared key: " << config->get("shared-key") << std::endl;
+    std::cout << "ID: " << config->get("id") << std::endl;
+    std::cout << "Hostname: " << config->get("hostname") << std::endl;
+    std::cout << "Username: " << config->get("username") << std::endl;
+
+    config->save(argv[1]);
+    
+    clairvoyance::net *conn;
+
+    try 
+    {
+        conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")));
+    } catch (std::string err)
+    {
+        std::cout << err << std::endl;
+    }
+
+    while(!conn->is_ready());
+
+    clairvoyance::json *packet = new clairvoyance::json("");
+    packet->set("shared-key", config->get("shared-key"));
+    conn->write(packet->to_string() + "\n");
+    delete packet;
+
+    clairvoyance::json *ping = new clairvoyance::json("");
+    ping->set("method", "ping");
+    
+    std::string message;
+
+    uint64_t last_ping = 0;
+    clairvoyance::json *recv;
+
+    for(;;)
+    {
+        message = conn->read();
+        if(message.size()) 
+        {
+            recv = new clairvoyance::json(message);
+            if(recv->get("method") == "update")
+            {
+                config->set(recv->get("key"), recv->get("value"));
+                config->save(argv[1]);
+            }
+            std::cout << message << conn->bytes_read << " / " << conn->bytes_written << std::endl;
+        }
+
+        if((last_ping + 30) < time(0))
+        {
+            last_ping = time(0);
+            ping->set("id", config->get("id"));
+            ping->set("client-time", std::to_string(last_ping));
+            conn->write(ping->to_string() + "\n");
+        }
+        usleep(25000);
+    }
     return 0;
 }

@@ -1,8 +1,5 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if libjson-c exists. */
-#undef HAVE_LIBJSON_C
-
 /* Name of package */
 #undef PACKAGE
 
