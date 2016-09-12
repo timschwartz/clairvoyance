@@ -82,6 +82,8 @@ namespace clairvoyance
     #ifdef __WIN32__
         if(WSAStartup(MAKEWORD(2,2), &wsa_data)) throw std::string("Couldn't initialize winsock.");
     #endif
+        bytes_read = bytes_written = 0;
+
         ip = resolve(hostname, port);
 
         switch(ip->ai_family)
@@ -124,6 +126,7 @@ namespace clairvoyance
 
     net::~net()
     {
+        ready = false;
         std::cout << "Bytes read: " << bytes_read << std::endl;
         std::cout << "Bytes written: " << bytes_written << std::endl;
         if(sock) close(sock);

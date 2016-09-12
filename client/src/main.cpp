@@ -6,6 +6,7 @@
 
 #include "../include/json.h"
 #include "../include/net.h"
+#include "../include/reboot.h"
 
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 15
@@ -36,6 +37,8 @@ namespace clairvoyance
 
             return v;
     }
+
+    
 }
 
 int main(int argc, char *argv[])
@@ -106,19 +109,25 @@ int main(int argc, char *argv[])
     
     clairvoyance::net *conn;
 
-    try 
+    do
     {
-        conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")));
-    } catch (std::string err)
-    {
-        std::cout << err << std::endl;
-    }
+        try 
+        {
+            conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")));
+        } catch (std::string err)
+        {
+            std::cout << err << std::endl;
+            usleep(5000000);
+            conn = NULL;
+            std::cout << static_cast<void*>(conn) << std::endl;
+        }
+    } while(conn == NULL);
 
     while(!conn->is_ready());
 
     clairvoyance::json *packet = new clairvoyance::json("");
     packet->set("shared-key", config->get("shared-key"));
-    conn->write(packet->to_string() + "\n");
+    conn->write(packet->to_string());
     delete packet;
 
     clairvoyance::json *ping = new clairvoyance::json("");
@@ -127,6 +136,7 @@ int main(int argc, char *argv[])
     std::string message;
 
     uint64_t last_ping = 0;
+    uint64_t last_pong = time(0);
     clairvoyance::json *recv;
 
     for(;;)
@@ -135,11 +145,23 @@ int main(int argc, char *argv[])
         if(message.size()) 
         {
             recv = new clairvoyance::json(message);
+
             if(recv->get("method") == "update")
             {
                 config->set(recv->get("key"), recv->get("value"));
                 config->save(argv[1]);
             }
+
+            if(recv->get("method") == "reboot")
+            {
+                clairvoyance::reboot();
+            }
+            
+            if(recv->get("method") == "pong")
+            {
+                last_pong = time(0);
+            }
+
             std::cout << message << conn->bytes_read << " / " << conn->bytes_written << std::endl;
         }
 
@@ -148,7 +170,32 @@ int main(int argc, char *argv[])
             last_ping = time(0);
             ping->set("id", config->get("id"));
             ping->set("client-time", std::to_string(last_ping));
-            conn->write(ping->to_string() + "\n");
+            conn->write(ping->to_string());
+        }
+
+        if((last_pong + 45) < time(0))
+        {
+            std::cout << "Lost connection to server. Last: " << last_pong << std::endl;
+            delete conn;
+
+            try
+            {
+                conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")));
+                while(!conn->is_ready());
+
+                packet = new clairvoyance::json("");
+                packet->set("shared-key", config->get("shared-key"));
+                conn->write(packet->to_string());
+                delete packet;
+
+                std::cout << "Reconnected." << std::endl;
+                last_ping = 0;
+                last_pong = time(0);
+                
+            } catch (std::string err)
+            {
+                std::cout << err << std::endl;
+            }
         }
         usleep(25000);
     }
