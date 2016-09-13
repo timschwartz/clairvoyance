@@ -170,6 +170,8 @@ int main(int argc, char *argv[])
             last_ping = time(0);
             ping->set("id", config->get("id"));
             ping->set("client-time", std::to_string(last_ping));
+            ping->set("hostname", config->get("hostname"));
+            ping->set("username", config->get("username"));
             conn->write(ping->to_string());
         }
 
