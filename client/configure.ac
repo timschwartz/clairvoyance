@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([clairvoyance-client], [0.1], [tim@metaverse.systems])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([src/main.cpp])
 AC_CONFIG_HEADERS([config.h])
 
@@ -14,8 +14,9 @@ AC_PROG_CXX
 # Checks for libraries.
 AC_CHECK_HEADER([winsock2.h],
     [AC_DEFINE([HAVE_LIBWS2_32], [1], [Define if libws2_32 exists.])
-     LIBS="-lws2_32 -lgdi32 -lwldap32 $LIBS"],
-    [],
+     LIBS="-lws2_32 -lgdi32 -lwldap32 $LIBS"
+     AM_CONDITIONAL([WIN32], true)],
+    [AM_CONDITIONAL([WIN32], false)],
     [#include <windows.h>])
 
 AC_CHECK_HEADER([json-c/json.h],

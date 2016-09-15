@@ -1,19 +1,11 @@
-#ifdef __WIN32__
 #include <windows.h>
 #include <wbemidl.h>
-#else
-#endif
 
 #include <iostream>
 #include "../include/reboot.h"
 
-#define MODE_NORMAL		1
-#define MODE_SAFE		2
-#define MODE_SAFE_NETWORK 	4
-
 namespace clairvoyance
 {
-#ifdef __WIN32__
     bool elevate_privilege(const TCHAR *privilege)
     {
         HANDLE hToken;
@@ -68,11 +60,4 @@ namespace clairvoyance
                 break;
         }
     }
-#else
-    bool reboot()
-    {
-        return false;
-    }
-
-#endif
 }
