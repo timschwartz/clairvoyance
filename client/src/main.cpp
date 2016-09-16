@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
             std::cout << message << conn->bytes_read << " / " << conn->bytes_written << std::endl;
         }
 
-        if((last_ping + 30) < time(0))
+        if((last_ping + 15) < time(0))
         {
             last_ping = time(0);
             ping->set("id", config->get("id"));

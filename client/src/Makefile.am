@@ -8,5 +8,5 @@ LDADD = $(SSL_LIBS) -ldl
 clairvoyance_SOURCES = main.cpp json.cpp net.cpp linux/reboot.cpp
 else
 LDADD = $(SSL_LIBS) -lwbemuuid -lole32 -loleaut32
-clairvoyance_SOURCES = main.cpp json.cpp net.cpp win32/reboot.cpp
+clairvoyance_SOURCES = main.cpp json.cpp net.cpp win32/reboot.cpp win32/service.cpp
 endif
