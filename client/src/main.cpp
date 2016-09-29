@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
                 std::cout << err << std::endl;
             }
         }
-        usleep(25000);
+        usleep(250000);
     }
     return 0;
 }
