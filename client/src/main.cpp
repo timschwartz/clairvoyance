@@ -7,6 +7,7 @@
 #include "../include/json.h"
 #include "../include/net.h"
 #include "../include/reboot.h"
+#include "../include/vnc.h"
 
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 15
@@ -36,9 +37,7 @@ namespace clairvoyance
             if(buff != "") v.push_back(buff);
 
             return v;
-    }
-
-    
+    }   
 }
 
 int main(int argc, char *argv[])
@@ -68,7 +67,6 @@ int main(int argc, char *argv[])
     config_file.seekg(0, std::ios::beg);
     config_file.read(&config_data[0], config_data.size());
     config_file.close();
-
 
     try
     {
@@ -138,6 +136,16 @@ int main(int argc, char *argv[])
     uint64_t last_ping = 0;
     uint64_t last_pong = time(0);
     clairvoyance::json *recv;
+
+    clairvoyance::vncserver *vnc;
+
+    try
+    {
+        vnc = new clairvoyance::vncserver(argc, argv, config->get("hostname"));
+    } catch(std::string e)
+    {
+        std::cout << e << std::endl;
+    }
 
     for(;;)
     {

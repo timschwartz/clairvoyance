@@ -27,6 +27,12 @@ AC_CHECK_HEADER([json-c/json.h],
 
 PKG_CHECK_MODULES([SSL], openssl)
 
+PKG_CHECK_MODULES([ZLIB], zlib)
+
+PKG_CHECK_MODULES([JPEG], libturbojpeg)
+
+PKG_CHECK_MODULES([VNC], libvncserver)
+
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
