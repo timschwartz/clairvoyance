@@ -21,6 +21,7 @@ namespace clairvoyance
         std::thread thread_vnc;
         void thread_func();
         bool ready;
+        int height, width, bpp;
     };
 }
 

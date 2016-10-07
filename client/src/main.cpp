@@ -8,6 +8,8 @@
 #include "../include/net.h"
 #include "../include/reboot.h"
 #include "../include/vnc.h"
+#include "../config.h"
+#include "../include/build.h"
 
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 15
@@ -49,6 +51,9 @@ int main(int argc, char *argv[])
         printf("Usage:\n%s config.json\n", argv[0]);
         return -1;
     }
+
+    std::string version_string = std::string(PACKAGE_STRING) + " build: " + std::string(BUILD_VERSION);
+    std::cout << version_string << std::endl;
 
     std::fstream config_file;
     std::string config_data;
@@ -130,6 +135,7 @@ int main(int argc, char *argv[])
 
     clairvoyance::json *ping = new clairvoyance::json("");
     ping->set("method", "ping");
+    ping->set("client_version", version_string.c_str());
     
     std::string message;
 
@@ -158,6 +164,7 @@ int main(int argc, char *argv[])
             {
                 config->set(recv->get("key"), recv->get("value"));
                 config->save(argv[1]);
+                std::cout << "Server updated '" << recv->get("key") << "' to '" << recv->get("value") << "'" << std::endl;
             }
 
             if(recv->get("method") == "reboot")
@@ -169,8 +176,6 @@ int main(int argc, char *argv[])
             {
                 last_pong = time(0);
             }
-
-            std::cout << message << conn->bytes_read << " / " << conn->bytes_written << std::endl;
         }
 
         if((last_ping + 15) < time(0))
