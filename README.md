@@ -14,4 +14,4 @@ When a client connects to the server, it first sends an authentication command.
 { "method": "authenticate", "shared-key": "shared secret" }
 ```
 
-The server will ignore anything sent by the server before authentication occurs.
+The server will ignore anything sent by the client before authentication occurs.
