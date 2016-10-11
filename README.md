@@ -44,7 +44,7 @@ Sent in reply to a client's 'ping' command.
 
 ```javascript
 {
-  "method": "ping",
+  "method": "pong",
   "server-time": "1476148417",
 }
 ```
