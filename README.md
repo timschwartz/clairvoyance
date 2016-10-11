@@ -34,3 +34,44 @@ client's hostname and currently logged in user.
   "username": "user"
 }
 ```
+
+## Server commands
+
+### pong
+
+Sent in reply to a client's 'ping' command.
+
+
+```javascript
+{
+  "method": "ping",
+  "server-time": "1476148417",
+}
+```
+
+If a client does not receive a 'pong' for 45 seconds, it assumes connection has dropped and attempts reconnect.
+
+### update
+
+Used to modify a client's configuration.
+
+For example: 
+
+When a client first connects it has no ID, the server generates a UUID and uses the 'update' command to inform the client.
+
+```javascript
+{
+  "method": "update",
+  "key": "id",
+  "value": "00000000-0000-0000-0000-000000000001"
+}
+```
+
+### reboot
+
+Reboots the client.
+
+```javascript
+{
+  "method": "reboot"
+}
