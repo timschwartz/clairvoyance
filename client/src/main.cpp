@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     {
         try 
         {
-            conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")));
+            conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")), true, true);
         } catch (std::string err)
         {
             std::cout << err << std::endl;
@@ -129,6 +129,7 @@ int main(int argc, char *argv[])
     while(!conn->is_ready());
 
     clairvoyance::json *packet = new clairvoyance::json("");
+    packet->set("method", "authenticate");
     packet->set("shared-key", config->get("shared-key"));
     conn->write(packet->to_string());
     delete packet;
@@ -145,9 +146,14 @@ int main(int argc, char *argv[])
 
     clairvoyance::vncserver *vnc;
 
+    clairvoyance::json *vnc_config = new clairvoyance::json("");
+    vnc_config->set("hostname", config->get("hostname"));
+    vnc_config->set("server", config->get("server"));
+    vnc_config->set("port", std::to_string(2049));
+
     try
     {
-        vnc = new clairvoyance::vncserver(argc, argv, config->get("hostname"));
+        vnc = new clairvoyance::vncserver(argc, argv, vnc_config);
     } catch(std::string e)
     {
         std::cout << e << std::endl;
@@ -195,7 +201,7 @@ int main(int argc, char *argv[])
 
             try
             {
-                conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")));
+                conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")), true, true);
                 while(!conn->is_ready());
 
                 packet = new clairvoyance::json("");

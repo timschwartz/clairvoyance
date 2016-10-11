@@ -32,13 +32,15 @@ namespace clairvoyance
     class net
     {
       public:
-        net(std::string hostname, int port);
+        net(std::string hostname, int port, bool start_thread, bool encrypted);
         ~net();
         std::string read();
         void write(std::string message);
         bool is_ready();
         uint64_t bytes_read;
         uint64_t bytes_written;
+        int get_sock();
+        SSL_CTX *get_ssl_ctx();
 
       private:
         const struct addrinfo *ip;

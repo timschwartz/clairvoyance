@@ -9,12 +9,16 @@
 #ifdef __WIN32__
   #include "../include/mingw.thread.h"
 #endif
+
+#include "net.h"
+#include "json.h"
+
 namespace clairvoyance
 {
     class vncserver
     {
       public:
-        vncserver(int argc, char *argv[], std::string hostname);
+        vncserver(int argc, char *argv[], clairvoyance::json *vnc_config);
         ~vncserver();
       private:
         rfbScreenInfoPtr rfbScreen;
@@ -22,6 +26,7 @@ namespace clairvoyance
         void thread_func();
         bool ready;
         int height, width, bpp;
+        clairvoyance::net *net;
     };
 }
 

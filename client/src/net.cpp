@@ -77,7 +77,7 @@ namespace clairvoyance
         return SSL_init;
     }
 
-    net::net(std::string hostname, int port)
+    net::net(std::string hostname, int port, bool start_thread, bool encrypted)
     {
     #ifdef __WIN32__
         if(WSAStartup(MAKEWORD(2,2), &wsa_data)) throw std::string("Couldn't initialize winsock.");
@@ -108,20 +108,26 @@ namespace clairvoyance
 
         std::cout << "Connected to " << hostname << " [" << ip_tostring(ip) << "]:" << port << std::endl;
 
-        if(!enable_ssl()) throw "Couldn't create SSL session.";
+        if(encrypted)
+        {
+            if(!enable_ssl()) throw "Couldn't create SSL session.";
 
-        cert = SSL_get_peer_certificate(ssl);
-        if(cert == NULL) throw std::string("Error: Could not get a certificate from " + hostname);
+            cert = SSL_get_peer_certificate(ssl);
+            if(cert == NULL) throw std::string("Error: Could not get a certificate from " + hostname);
+    
+            certname = X509_NAME_new();
+            certname = X509_get_subject_name(cert);
 
-        certname = X509_NAME_new();
-        certname = X509_get_subject_name(cert);
+            X509_NAME_print_ex(outbio, certname, 0, 0);
+            std::cout << std::endl;
 
-        X509_NAME_print_ex(outbio, certname, 0, 0);
-        std::cout << std::endl;
-
-        std::cout << "Starting thread" << std::endl;
-        thread_net = std::thread(&net::thread_func, this);
-        thread_net.detach();    
+            if(start_thread)
+            {
+                std::cout << "Starting thread" << std::endl;
+                thread_net = std::thread(&net::thread_func, this);
+                thread_net.detach();    
+            }
+        }
     }
 
     net::~net()
@@ -235,5 +241,15 @@ namespace clairvoyance
     bool net::is_ready()
     {
         return ready;
+    }
+
+    int net::get_sock()
+    {
+        return sock;
+    }
+
+    SSL_CTX *net::get_ssl_ctx()
+    {
+        return ctx;
     }
 }

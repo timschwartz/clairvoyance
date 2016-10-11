@@ -21,7 +21,8 @@ static enum rfbNewClientAction new_client(rfbClientPtr cl)
 
 namespace clairvoyance
 {
-    vncserver::vncserver(int argc, char *argv[], std::string hostname)
+
+    vncserver::vncserver(int argc, char *argv[], clairvoyance::json *vnc_config)
     {
         ready = false;
 
@@ -39,7 +40,7 @@ namespace clairvoyance
             throw message;
         }
 
-        rfbScreen->desktopName = hostname.c_str();
+        rfbScreen->desktopName = vnc_config->get("hostname").c_str();
         rfbScreen->frameBuffer = (char *)malloc(width * height * bpp);
         rfbScreen->alwaysShared = TRUE;
         rfbScreen->ptrAddEvent = event_handler;
@@ -47,6 +48,9 @@ namespace clairvoyance
         rfbScreen->newClientHook = new_client;
 
         memset(rfbScreen->frameBuffer, 0, width * height * bpp);
+
+        net = new clairvoyance::net(vnc_config->get("server"), std::stoi(vnc_config->get("port")), false, false); 
+        rfbScreen->inetdSock = net->get_sock();
         rfbInitServer(rfbScreen);
 
         thread_vnc = std::thread(&vncserver::thread_func, this);
