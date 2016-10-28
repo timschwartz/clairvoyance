@@ -149,15 +149,6 @@ int main(int argc, char *argv[])
     clairvoyance::json *vnc_config = new clairvoyance::json("");
     vnc_config->set("hostname", config->get("hostname"));
     vnc_config->set("server", config->get("server"));
-    vnc_config->set("port", std::to_string(2049));
-
-    try
-    {
-        vnc = new clairvoyance::vncserver(argc, argv, vnc_config);
-    } catch(std::string e)
-    {
-        std::cout << e << std::endl;
-    }
 
     for(;;)
     {
@@ -181,6 +172,20 @@ int main(int argc, char *argv[])
             if(recv->get("method") == "pong")
             {
                 last_pong = time(0);
+            }
+
+            if(recv->get("method") == "connect")
+            {
+                vnc_config->set("port", recv->get("port"));
+                std::cout << "Connecting to VNC port " << recv->get("port") << " as host." << std::endl;
+
+                try
+                {
+                    vnc = new clairvoyance::vncserver(argc, argv, vnc_config);
+                } catch(std::string e)
+                {
+                    std::cout << e << std::endl;
+                }
             }
         }
 
