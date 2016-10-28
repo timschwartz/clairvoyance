@@ -46,7 +46,7 @@ namespace clairvoyance
         const struct addrinfo *ip;
         const struct addrinfo *resolve(std::string hostname, int port);
         int sock;
-        bool enable_ssl();
+        bool enable_ssl(int socket);
         BIO *certbio, *outbio;
         X509 *cert;
         X509_NAME *certname;
@@ -57,6 +57,7 @@ namespace clairvoyance
         void thread_func();
         std::list<std::string> input_buffer;
         bool ready;
+        bool certificate(std::string certfile, std::string keyfile);
     };
 }
 

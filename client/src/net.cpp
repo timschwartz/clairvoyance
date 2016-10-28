@@ -28,6 +28,13 @@ namespace clairvoyance
     WSADATA wsa_data;
 #endif
 
+    /**
+        Convert IP address to string
+
+        @param[in]     ip An *addrinfo* struct containing an IPv4 or IPv6 address.
+        @return The IP address as a std::string.
+    */
+
     std::string ip_tostring(const struct addrinfo *ip)
     {
         void *sa;
@@ -90,7 +97,7 @@ namespace clairvoyance
         {
             case AF_INET6:
                 std::cout << "IPv6 ";
-                if((this->sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv6 socket.");
+                if((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv6 socket.");
                 break;
             case AF_INET:
                 std::cout << "IPv4 ";
@@ -110,7 +117,7 @@ namespace clairvoyance
 
         if(encrypted)
         {
-            if(!enable_ssl()) throw "Couldn't create SSL session.";
+            if(!enable_ssl(sock)) throw "Couldn't create SSL session.";
 
             cert = SSL_get_peer_certificate(ssl);
             if(cert == NULL) throw std::string("Error: Could not get a certificate from " + hostname);
@@ -164,7 +171,7 @@ namespace clairvoyance
         return address;
     }
 
-    bool net::enable_ssl()
+    bool net::enable_ssl(int socket)
     {
         outbio  = BIO_new_fp(stdout, BIO_NOCLOSE);
 
@@ -178,7 +185,7 @@ namespace clairvoyance
 
         SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
         ssl = SSL_new(ctx);
-        SSL_set_fd(ssl, sock);
+        SSL_set_fd(ssl, socket);
         int ret;
         if(ret = SSL_connect(ssl) < 0)
         {
@@ -190,12 +197,38 @@ namespace clairvoyance
         return true;
     }
 
+    bool net::certificate(std::string certfile, std::string keyfile)
+    {
+        if(SSL_CTX_use_certificate_file(ctx, certfile.c_str(), SSL_FILETYPE_PEM) <= 0)
+        {
+            ERR_print_errors_fp(stderr);
+            return false;
+        }
+
+        if(SSL_CTX_use_PrivateKey_file(ctx, keyfile.c_str(), SSL_FILETYPE_PEM) <= 0)
+        {
+            ERR_print_errors_fp(stderr);
+            return false;
+        }
+
+        if(!SSL_CTX_check_private_key(ctx))
+        {
+            std::cerr << "Private key does not match the public certificate" << std::endl;
+            return false;
+        }
+        return true;
+    }
+
     void net::thread_func()
     {
         char buffer[2000];
         uint32_t b_read;
         std::vector<std::string> commands;
         std::string partial_message;
+        struct timeval tv;
+
+        tv.tv_sec = 0;
+        tv.tv_usec = 2500;
 
         ready = true;
 
@@ -217,7 +250,8 @@ namespace clairvoyance
                     partial_message = "";
                 }
             }
-            usleep(250);
+
+            usleep(2500);
         }
     }
 
@@ -225,9 +259,9 @@ namespace clairvoyance
     {
         std::string message = "";
 
-        if(!this->input_buffer.size()) return message;
-        message = this->input_buffer.front();
-        this->input_buffer.pop_front();
+        if(!input_buffer.size()) return message;
+        message = input_buffer.front();
+        input_buffer.pop_front();
         return message;
     }
 
