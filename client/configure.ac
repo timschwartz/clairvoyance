@@ -39,4 +39,6 @@ PKG_CHECK_MODULES([VNC], libvncserver)
 
 # Checks for library functions.
 
+AC_CONFIG_FILES([Doxyfile])
+
 AC_OUTPUT(Makefile src/Makefile)
