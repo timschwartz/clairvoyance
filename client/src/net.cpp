@@ -172,7 +172,7 @@ namespace clairvoyance
         return true;
     }
 
-    void net::thread_func()
+    void client::thread_func()
     {
         char buffer[2000];
         uint32_t b_read;
@@ -240,10 +240,96 @@ namespace clairvoyance
         return ctx;
     }
 
-    server::server(std::string listen_address, int port)
-    {
+        server::server(std::string listen_address, int port)
+        {
+#ifdef __WIN32__
+            if(WSAStartup(MAKEWORD(2,2), &wsa_data)) throw std::string("Couldn't initialize winsock.");
+#endif
+            bytes_read = bytes_written = 0;
+            listen_address = listen_address;
 
-    }
+            ip = resolve(listen_address, port);
+
+            switch(ip->ai_family)
+            {
+                case AF_INET6:
+                    if((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv6 socket.");
+                    break;
+                case AF_INET:
+                    if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv4 socket.");
+                    break;
+            }
+
+            int reuse = 1;
+            if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(int)) == -1) throw std::string("setsockopt() failed.");
+
+            if(bind(sock, ip->ai_addr, ip->ai_addrlen) == -1) throw std::string("Couldn't bind to "+listen_address);
+
+            if(listen(sock, 10) == -1) throw std::string("Unable to listen");
+
+            FD_ZERO(&socks);
+            FD_SET(sock, &socks);
+            maxsock = sock;
+        }
+
+        void handle(clairvoyance::net::server *server, int s, fd_set *set)
+        {
+            int nbytes;
+            char buf[2000];
+            memset(buf, 0, 2000);
+
+            if((nbytes = recv(s, buf, sizeof(buf), 0)) <= 0)
+            {
+                FD_CLR(s, set); 
+                return;
+            }
+
+            for(int i = 0; i < set->fd_count; i++)
+            {
+                if(!FD_ISSET(set->fd_array[i], set)) continue;
+                if(set->fd_array[i] == s) continue;
+                if(send(set->fd_array[i], buf, nbytes, 0) < 0) std::cout << "send() failed" << std::endl;
+            }
+        }
+ 
+
+        void server::thread_func()
+        {
+            fd_set readsocks;
+            size_t s;
+
+            ready = true;
+            while(ready)
+            {
+                readsocks = socks;
+
+                if(select(maxsock + 1, &readsocks, NULL, NULL, NULL) == -1) throw std::string("select() failed.");
+
+                for(s = 0; s <= maxsock; s++)
+                {
+                    if(!FD_ISSET(s, &readsocks)) continue;
+
+                    if(s != sock)
+                    {
+                        handle(this, s, &socks);
+                        continue;
+                    }
+                    
+                    socklen_t addr_size = sizeof(sockaddr);
+                    struct addrinfo client_addr;
+                    struct sockaddr sa;
+                    int newsock = accept(sock, &sa, &addr_size);
+                    if(newsock == -1) throw std::string("accept() failed.");
+                    client_addr.ai_family = sa.sa_family;
+                    client_addr.ai_addr = &sa;
+
+                    FD_SET(newsock, &socks);
+                    if(newsock > maxsock)  maxsock = newsock;
+                }
+
+                usleep(10000);
+            }
+        }
 
         client::client(std::string hostname, int port)
         {
@@ -263,7 +349,7 @@ namespace clairvoyance
                     break;
                 case AF_INET:
                     std::cout << "IPv4 ";
-                    if((this->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv4 socket.");
+                    if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv4 socket.");
                     break;
             }
 
@@ -294,7 +380,13 @@ namespace clairvoyance
 
         bool client::start_thread()
         {
-            std::cout << "Starting thread" << std::endl;
+            thread_net = std::thread(thread_func, this);
+            thread_net.detach();
+
+        }
+
+        bool server::start_thread()
+        {
             thread_net = std::thread(thread_func, this);
             thread_net.detach();
 

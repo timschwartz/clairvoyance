@@ -58,7 +58,6 @@ namespace clairvoyance
             SSL_CTX *ctx;
             SSL *ssl;
             std::thread thread_net;
-            void thread_func();
             std::list<std::string> input_buffer;
             bool ready;
             bool certificate(std::string certfile, std::string keyfile);
@@ -69,6 +68,12 @@ namespace clairvoyance
         {
           public:
             server(std::string listen_address, int port);
+            std::string listen_address;
+            bool start_thread();
+          private:
+              fd_set socks;
+              int maxsock;
+              void thread_func();
         };
 
         class client : public net
@@ -79,6 +84,8 @@ namespace clairvoyance
             bool start_thread();
             std::string hostname;
             void set_callback(clairvoyance::net::callback func);
+          private:
+            void thread_func();
         };
     }
 }
