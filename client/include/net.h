@@ -32,6 +32,8 @@ namespace clairvoyance
         bool init_ssl_lib();
         const struct addrinfo *resolve(std::string hostname, int port);
 
+        typedef void (*callback)(void *);
+
         class net
         {
           public:
@@ -60,6 +62,7 @@ namespace clairvoyance
             std::list<std::string> input_buffer;
             bool ready;
             bool certificate(std::string certfile, std::string keyfile);
+            callback callback = NULL;
         };
 
         class server : public net
@@ -75,6 +78,7 @@ namespace clairvoyance
             bool start_ssl();
             bool start_thread();
             std::string hostname;
+            void set_callback(clairvoyance::net::callback func);
         };
     }
 }

@@ -199,7 +199,7 @@ namespace clairvoyance
                 {
                     commands = explode(partial_message.c_str(), '\n');
                     for(auto n:commands) input_buffer.push_back(n);
-
+                    if(callback) (*callback)(&commands);
                     partial_message = "";
                 }
             }
@@ -298,6 +298,11 @@ namespace clairvoyance
             thread_net = std::thread(thread_func, this);
             thread_net.detach();
 
+        }
+
+        void client::set_callback(clairvoyance::net::callback func)
+        {
+            callback = func;
         }
     }
 }
