@@ -49,8 +49,8 @@ namespace clairvoyance
 
         memset(rfbScreen->frameBuffer, 0, width * height * bpp);
 
-        net = new clairvoyance::net(vnc_config->get("server"), std::stoi(vnc_config->get("port")), false, false); 
-        rfbScreen->inetdSock = net->get_sock();
+        client = new clairvoyance::net::client(vnc_config->get("server"), std::stoi(vnc_config->get("port"))); 
+        rfbScreen->inetdSock = client->get_sock();
         rfbInitServer(rfbScreen);
 
         thread_vnc = std::thread(&vncserver::thread_func, this);

@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    clairvoyance::init_ssl_lib();
+    clairvoyance::net::init_ssl_lib();
 
     char hostname[HOST_NAME_MAX];
 #ifdef __WIN32__
@@ -110,13 +110,13 @@ int main(int argc, char *argv[])
 
     config->save(argv[1]);
     
-    clairvoyance::net *conn;
+    clairvoyance::net::client *conn;
 
     do
     {
         try 
         {
-            conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")), true, true);
+            conn = new clairvoyance::net::client(config->get("server"), std::stoi(config->get("port")));
         } catch (std::string err)
         {
             std::cout << err << std::endl;
@@ -126,7 +126,10 @@ int main(int argc, char *argv[])
         }
     } while(conn == NULL);
 
-    while(!conn->is_ready());
+
+    conn->start_ssl();
+    conn->start_thread();
+    while(!conn->is_ready()) usleep(1000);
 
     clairvoyance::json *packet = new clairvoyance::json("");
     packet->set("method", "authenticate");
@@ -206,7 +209,7 @@ int main(int argc, char *argv[])
 
             try
             {
-                conn = new clairvoyance::net(config->get("server"), std::stoi(config->get("port")), true, true);
+                conn = new clairvoyance::net::client(config->get("server"), std::stoi(config->get("port")));
                 while(!conn->is_ready());
 
                 packet = new clairvoyance::json("");

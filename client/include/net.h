@@ -27,38 +27,56 @@
 
 namespace clairvoyance
 {
-    bool init_ssl_lib();
-
-    class net
+    namespace net
     {
-      public:
-        net(std::string hostname, int port, bool start_thread, bool encrypted);
-        ~net();
-        std::string read();
-        void write(std::string message);
-        bool is_ready();
-        uint64_t bytes_read;
-        uint64_t bytes_written;
-        int get_sock();
-        SSL_CTX *get_ssl_ctx();
-
-      private:
-        const struct addrinfo *ip;
+        bool init_ssl_lib();
         const struct addrinfo *resolve(std::string hostname, int port);
-        int sock;
-        bool enable_ssl(int socket);
-        BIO *certbio, *outbio;
-        X509 *cert;
-        X509_NAME *certname;
-        const SSL_METHOD *method;
-        SSL_CTX *ctx;
-        SSL *ssl;
-        std::thread thread_net;
-        void thread_func();
-        std::list<std::string> input_buffer;
-        bool ready;
-        bool certificate(std::string certfile, std::string keyfile);
-    };
+
+        class net
+        {
+          public:
+            net();
+            ~net();
+            std::string read();
+            void write(std::string message);
+            bool is_ready();
+            uint64_t bytes_read;
+            uint64_t bytes_written;
+            int get_sock();
+            SSL_CTX *get_ssl_ctx();
+
+          protected:
+            const struct addrinfo *ip;
+            int sock;
+            bool enable_ssl(int socket);
+            BIO *certbio, *outbio;
+            X509 *cert;
+            X509_NAME *certname;
+            const SSL_METHOD *method;
+            SSL_CTX *ctx;
+            SSL *ssl;
+            std::thread thread_net;
+            void thread_func();
+            std::list<std::string> input_buffer;
+            bool ready;
+            bool certificate(std::string certfile, std::string keyfile);
+        };
+
+        class server : public net
+        {
+          public:
+            server(std::string listen_address, int port);
+        };
+
+        class client : public net
+        {
+          public:
+            client(std::string hostname, int port);
+            bool start_ssl();
+            bool start_thread();
+            std::string hostname;
+        };
+    }
 }
 
 #endif

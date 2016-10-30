@@ -26,7 +26,7 @@ namespace clairvoyance
         void thread_func();
         bool ready;
         int height, width, bpp;
-        clairvoyance::net *net;
+        clairvoyance::net::client *client;
     };
 }
 

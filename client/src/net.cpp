@@ -5,136 +5,112 @@
 
 namespace clairvoyance
 {
-    bool SSL_init = false;
+    namespace net
+    {
+        bool SSL_init = false;
 
 #ifdef __WIN32__
-    const char* inet_ntop(int af, const void* src, char* dst, int cnt)
-    {
-        struct sockaddr_in srcaddr;
-
-        memset(&srcaddr, 0, sizeof(struct sockaddr_in));
-        memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
-
-        srcaddr.sin_family = af;
-        if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt) != 0)
+        const char* inet_ntop(int af, const void* src, char* dst, int cnt)
         {
-            DWORD rv = WSAGetLastError();
-            printf("WSAAddressToString() : %d\n",rv);
-            return NULL;
-        }
-        return dst;
-    }
+            struct sockaddr_in srcaddr;
 
-    WSADATA wsa_data;
+            memset(&srcaddr, 0, sizeof(struct sockaddr_in));
+            memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
+
+            srcaddr.sin_family = af;
+            if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt) != 0)
+            {
+                DWORD rv = WSAGetLastError();
+                printf("WSAAddressToString() : %d\n",rv);
+                return NULL;
+            }
+            return dst;
+        }
+
+        WSADATA wsa_data;
 #endif
 
-    /**
-        Convert IP address to string
+        /**
+            Convert IP address to string
 
-        @param[in]     ip An *addrinfo* struct containing an IPv4 or IPv6 address.
-        @return The IP address as a std::string.
-    */
+            @param[in]     ip An *addrinfo* struct containing an IPv4 or IPv6 address.
+            @return The IP address as a std::string.
+        */
 
-    std::string ip_tostring(const struct addrinfo *ip)
-    {
-        void *sa;
-        struct in6_addr IPv6_addr;
-        struct in_addr IPv4_addr;
-        std::string output;
-        std::stringstream ss;
-        char *s = new char[INET6_ADDRSTRLEN];
-
-        switch(ip->ai_family)
+        std::string ip_tostring(const struct addrinfo *ip)
         {
-            case AF_INET6:
-                sa = (struct sockaddr_in6 *)ip->ai_addr;
-                IPv6_addr = ((struct sockaddr_in6 *)sa)->sin6_addr;
-                inet_ntop(AF_INET6, &IPv6_addr, s, INET6_ADDRSTRLEN);
-                output = s;
-                break;
-            case AF_INET:
-                sa = (struct sockaddr_in *)ip->ai_addr;
-                IPv4_addr = ((struct sockaddr_in *)sa)->sin_addr;
-                inet_ntop(AF_INET, &IPv4_addr, s, INET6_ADDRSTRLEN);
-                output = s;
-                break;
-        }
+            void *sa;
+            struct in6_addr IPv6_addr;
+            struct in_addr IPv4_addr;
+            std::string output;
+            std::stringstream ss;
+            char *s = new char[INET6_ADDRSTRLEN];
 
-        return output;
-    }
-
-    bool init_ssl_lib()
-    {
-        if(SSL_init == false)
-        {
-            std::cout << "Initializing SSL." << std::endl;
-
-            OpenSSL_add_all_algorithms();
-            ERR_load_BIO_strings();
-            ERR_load_crypto_strings();
-            SSL_load_error_strings();
-
-            if(SSL_library_init() < 0)
+            switch(ip->ai_family)
             {
-                std::cout << "Could not initialize the OpenSSL library !" << std::endl;
+                case AF_INET6:
+                    sa = (struct sockaddr_in6 *)ip->ai_addr;
+                    IPv6_addr = ((struct sockaddr_in6 *)sa)->sin6_addr;
+                    inet_ntop(AF_INET6, &IPv6_addr, s, INET6_ADDRSTRLEN);
+                    output = s;
+                    break;
+                case AF_INET:
+                    sa = (struct sockaddr_in *)ip->ai_addr;
+                    IPv4_addr = ((struct sockaddr_in *)sa)->sin_addr;
+                    inet_ntop(AF_INET, &IPv4_addr, s, INET6_ADDRSTRLEN);
+                    output = s;
+                    break;
             }
-            else SSL_init = true;
+
+            return output;
         }
 
-        return SSL_init;
-    }
-
-    net::net(std::string hostname, int port, bool start_thread, bool encrypted)
-    {
-    #ifdef __WIN32__
-        if(WSAStartup(MAKEWORD(2,2), &wsa_data)) throw std::string("Couldn't initialize winsock.");
-    #endif
-        bytes_read = bytes_written = 0;
-
-        ip = resolve(hostname, port);
-
-        switch(ip->ai_family)
+        bool init_ssl_lib()
         {
-            case AF_INET6:
-                std::cout << "IPv6 ";
-                if((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv6 socket.");
-                break;
-            case AF_INET:
-                std::cout << "IPv4 ";
-                if((this->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv4 socket.");
-                break;
+            if(SSL_init == false)
+            {
+                std::cout << "Initializing SSL." << std::endl;
+
+                OpenSSL_add_all_algorithms();
+                ERR_load_BIO_strings();
+                ERR_load_crypto_strings();
+                SSL_load_error_strings();
+
+                if(SSL_library_init() < 0)
+                {
+                    std::cout << "Could not initialize the OpenSSL library !" << std::endl;
+                }
+                else SSL_init = true;
+            }
+
+            return SSL_init;
         }
 
-
-        if((connect(sock, ip->ai_addr, ip->ai_addrlen)) < 0)
+        const struct addrinfo *resolve(std::string hostname, int port)
         {
-            std::string err = "Error: " + std::to_string(errno) + ". Couldn't connect to " 
-                            + hostname + ":" + std::to_string(port);
-            throw err;
-        }
+            uint32_t i;
 
-        std::cout << "Connected to " << hostname << " [" << ip_tostring(ip) << "]:" << port << std::endl;
+            struct addrinfo hints, *address;
 
-        if(encrypted)
-        {
-            if(!enable_ssl(sock)) throw "Couldn't create SSL session.";
+            memset(&hints, 0, sizeof(hints));
 
-            cert = SSL_get_peer_certificate(ssl);
-            if(cert == NULL) throw std::string("Error: Could not get a certificate from " + hostname);
+            hints.ai_flags = 0;
+            hints.ai_family = AF_UNSPEC;
+            hints.ai_socktype = SOCK_STREAM;
+            hints.ai_protocol = 0;
+
+            i = getaddrinfo(hostname.c_str(), std::to_string(port).c_str(), &hints, &address);
     
-            certname = X509_NAME_new();
-            certname = X509_get_subject_name(cert);
-
-            X509_NAME_print_ex(outbio, certname, 0, 0);
-            std::cout << std::endl;
-
-            if(start_thread)
+            if(i)
             {
-                std::cout << "Starting thread" << std::endl;
-                thread_net = std::thread(&net::thread_func, this);
-                thread_net.detach();    
+                throw std::string("getaddrinfo() failed: " + i);
             }
+
+            return address;
         }
+
+    net::net()
+    {
     }
 
     net::~net()
@@ -146,29 +122,6 @@ namespace clairvoyance
     #ifdef __WIN32__
         WSACleanup();
     #endif
-    }
-
-    const struct addrinfo *net::resolve(std::string hostname, int port)
-    {
-        uint32_t i;
-
-        struct addrinfo hints, *address;
-
-        memset(&hints, 0, sizeof(hints));
-
-        hints.ai_flags = 0;
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = 0;
-
-        i = getaddrinfo(hostname.c_str(), std::to_string(port).c_str(), &hints, &address);
-
-        if(i)
-        {
-            throw std::string("getaddrinfo() failed: " + i);
-        }
-
-        return address;
     }
 
     bool net::enable_ssl(int socket)
@@ -285,5 +238,66 @@ namespace clairvoyance
     SSL_CTX *net::get_ssl_ctx()
     {
         return ctx;
+    }
+
+    server::server(std::string listen_address, int port)
+    {
+
+    }
+
+        client::client(std::string hostname, int port)
+        {
+#ifdef __WIN32__
+            if(WSAStartup(MAKEWORD(2,2), &wsa_data)) throw std::string("Couldn't initialize winsock.");
+#endif
+            bytes_read = bytes_written = 0;
+            hostname = hostname;
+
+            ip = resolve(hostname, port);
+
+            switch(ip->ai_family)
+            {
+                case AF_INET6:
+                    std::cout << "IPv6 ";
+                    if((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv6 socket.");
+                    break;
+                case AF_INET:
+                    std::cout << "IPv4 ";
+                    if((this->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) throw std::string("Couldn't create IPv4 socket.");
+                    break;
+            }
+
+
+            if((connect(sock, ip->ai_addr, ip->ai_addrlen)) < 0)
+            {
+                std::string err = "Error: " + std::to_string(errno) + ". Couldn't connect to "
+                                + hostname + ":" + std::to_string(port);
+                throw err;
+            }
+
+            std::cout << "Connected to " << hostname << " [" << ip_tostring(ip) << "]:" << port << std::endl;
+        }
+
+        bool client::start_ssl()
+        {
+            if(!enable_ssl(sock)) throw "Couldn't create SSL session.";
+
+            cert = SSL_get_peer_certificate(ssl);
+            if(cert == NULL) throw std::string("Error: Could not get a certificate from " + hostname);
+
+            certname = X509_NAME_new();
+            certname = X509_get_subject_name(cert);
+
+            X509_NAME_print_ex(outbio, certname, 0, 0);
+            std::cout << std::endl;
+        }
+
+        bool client::start_thread()
+        {
+            std::cout << "Starting thread" << std::endl;
+            thread_net = std::thread(thread_func, this);
+            thread_net.detach();
+
+        }
     }
 }
